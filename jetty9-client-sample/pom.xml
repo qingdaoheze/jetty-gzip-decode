@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>jetty9-client-sample</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+<!--        <jetty.version>10.0.2</jetty.version>-->
+        <jetty.version>9.4.19.v20190610</jetty.version>
+<!--        <jetty.version>9.4.39.v20210325</jetty.version>-->
+<!--        <jetty-el.version>8.5.54</jetty-el.version>-->
+<!--        <jetty-jsp.version>2.2.0.v201112011158</jetty-jsp.version>-->
+<!--        <jetty-reactive-httpclient.version>1.0.3</jetty-reactive-httpclient.version>-->
+    </properties>
+
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-client -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-client</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty.http2</groupId>
+            <artifactId>http2-http-client-transport</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+    </dependencies>
+
+
+</project>
