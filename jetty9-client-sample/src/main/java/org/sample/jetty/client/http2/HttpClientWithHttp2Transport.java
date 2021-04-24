@@ -31,7 +31,7 @@ public class HttpClientWithHttp2Transport {
         String requestBody = "{ \"age\": 0, \"name\": \"string\"}";
         int headerCount = 10;
         int headerSize = 200;
-        int threadCount = 50;
+        int threadCount = 100;
 
         HttpClient httpClient = builderHttpClient();
         CountDownLatch countDownLatch = new CountDownLatch(threadCount);
