@@ -43,6 +43,7 @@ public class HttpClientWithHttp2Transport {
                     ContentResponse contentResponse = null;
                     try {
                         contentResponse = request.send();
+                        printResponse(contentResponse);
                     } catch (InterruptedException e) {
                         log.error(e.getMessage(), e);
                     } catch (TimeoutException e) {
@@ -50,7 +51,6 @@ public class HttpClientWithHttp2Transport {
                     } catch (ExecutionException e) {
                         log.error(e.getMessage(), e);
                     }
-                    printResponse(contentResponse);
                 }
                 countDownLatch.countDown();
             });
@@ -75,7 +75,7 @@ public class HttpClientWithHttp2Transport {
         ContentProvider contentProvider = new StringContentProvider("application/json", content, StandardCharsets.UTF_8);
         Request request = httpClient.POST(url).content(contentProvider, "application/json");
         request.timeout(6, TimeUnit.SECONDS);
-        request.idleTimeout(3, TimeUnit.SECONDS);
+        request.idleTimeout(5, TimeUnit.SECONDS);
         for (int i = 0; i < headerCount; i++) {
             request.header("x-customer-" + i, randomValue(headerSize));
         }
