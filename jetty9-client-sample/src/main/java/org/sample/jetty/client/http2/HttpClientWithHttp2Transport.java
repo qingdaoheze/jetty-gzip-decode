@@ -31,12 +31,12 @@ public class HttpClientWithHttp2Transport {
         String requestBody = "{ \"age\": 0, \"name\": \"string\"}";
         int headerCount = 10;
         int headerSize = 200;
-        int threadSize = 90;
+        int threadCount = 50;
 
         HttpClient httpClient = builderHttpClient();
-        CountDownLatch countDownLatch = new CountDownLatch(threadSize);
+        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
 
-        for (int i = 0; i < threadSize; i++) {
+        for (int i = 0; i < threadCount; i++) {
             Thread thread = new Thread(() -> {
                 for (int j = 0; j < 100; j++) {
                     Request request = buildRequest(httpClient, url, requestBody, headerCount, headerSize);
