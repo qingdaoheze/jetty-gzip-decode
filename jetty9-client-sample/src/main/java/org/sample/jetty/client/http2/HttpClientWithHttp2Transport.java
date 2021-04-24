@@ -6,7 +6,6 @@ import org.eclipse.jetty.client.api.ContentProvider;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.util.StringContentProvider;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http2.client.HTTP2Client;
@@ -15,99 +14,110 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Date: 2021/4/1
  */
 public class HttpClientWithHttp2Transport {
     private static final Logger log = LoggerFactory.getLogger(HttpClientWithHttp2Transport.class);
-    public static void main(String[] args) throws Exception {
-        postHttp2("http://127.0.0.1:8081/tomcat/post", "{ \"age\": 0, \"name\": \"string\"}");
-//        postHttp2("http://127.0.0.1:8081/tomcat/post1", "");
 
+    public static void main(String[] args) {
+        String url = "http://127.0.0.1:8081/tomcat/post";
+        String requestBody = "{ \"age\": 0, \"name\": \"string\"}";
+        int headerCount = 10;
+        int headerSize = 200;
+        int threadSize = 90;
+
+        HttpClient httpClient = builderHttpClient();
+        CountDownLatch countDownLatch = new CountDownLatch(threadSize);
+
+        for (int i = 0; i < threadSize; i++) {
+            Thread thread = new Thread(() -> {
+                for (int j = 0; j < 100; j++) {
+                    Request request = buildRequest(httpClient, url, requestBody, headerCount, headerSize);
+                    ContentResponse contentResponse = null;
+                    try {
+                        contentResponse = request.send();
+                    } catch (InterruptedException e) {
+                        log.error(e.getMessage(), e);
+                    } catch (TimeoutException e) {
+                        log.error(e.getMessage(), e);
+                    } catch (ExecutionException e) {
+                        log.error(e.getMessage(), e);
+                    }
+                    printResponse(contentResponse);
+                }
+                countDownLatch.countDown();
+            });
+            thread.setDaemon(true);
+            thread.setName("jetty-http-client-" + i);
+            thread.start();
+        }
+
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            log.error(e.getMessage(), e);
+        }
+        try {
+            httpClient.stop();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
-    private static void postHttp2(String url, String content) throws Exception {
+    private static Request buildRequest(HttpClient httpClient, String url, String content, int headerCount, int headerSize) {
+        ContentProvider contentProvider = new StringContentProvider("application/json", content, StandardCharsets.UTF_8);
+        Request request = httpClient.POST(url).content(contentProvider, "application/json");
+        request.timeout(6, TimeUnit.SECONDS);
+        request.idleTimeout(3, TimeUnit.SECONDS);
+        for (int i = 0; i < headerCount; i++) {
+            request.header("x-customer-" + i, randomValue(headerSize));
+        }
+        return request;
+    }
 
+    private static String randomValue(int headerSize) {
+        StringBuilder headerBuilder = new StringBuilder(headerSize);
+        for (int i = 0; i < headerSize; i++) {
+            headerBuilder.append((char)(65 + new Random().nextInt(57)));
+        }
+        return headerBuilder.toString();
+    }
+
+    private static void printResponse(ContentResponse contentResponse) {
+        try {
+            int status = contentResponse.getStatus();
+            HttpVersion version = contentResponse.getVersion();
+            String contentAsString = contentResponse.getContentAsString();
+            String contentEncoding = contentResponse.getHeaders().get(HttpHeader.CONTENT_ENCODING);
+            log.info("status: {}, version:{}, contentEncoding:{}, contentAsString:{}", status, version, contentEncoding, contentAsString);
+        } catch (Exception e) {
+            log.error("print response error");
+        }
+    }
+
+    private static HttpClient builderHttpClient() {
         HTTP2Client http2Client = new HTTP2Client();
         http2Client.setSelectors(1);
         HttpClientTransport transport = new HttpClientTransportOverHTTP2(http2Client);
 
         HttpClient httpClient = new HttpClient(transport, null);
-        httpClient.setMaxConnectionsPerDestination(2);
-        httpClient.setMaxRequestsQueuedPerDestination(2);
         httpClient.setConnectTimeout(1000);
         httpClient.setIdleTimeout(30000);
+        // Increase header size
+        httpClient.setRequestBufferSize(16384);
         httpClient.setFollowRedirects(true);
-        httpClient.start();
-
         try {
-            ContentProvider contentProvider = new StringContentProvider("application/json", content, StandardCharsets.UTF_8);
-            Request request = httpClient.POST(url).content(contentProvider, "application/json");
-            request.timeout(6, TimeUnit.SECONDS);
-            request.idleTimeout(3, TimeUnit.SECONDS);
-            ContentResponse contentResponse = request.send();
-            int status = contentResponse.getStatus();
-            log.info("status:{}", status);
-            HttpVersion version = contentResponse.getVersion();
-            log.info("version: {}", version);
-            System.out.println(version);
-            String contentAsString = contentResponse.getContentAsString();
-            System.out.println(contentAsString);
-            log.info("response:{}", contentAsString);
-            String contentEncoding = contentResponse.getHeaders().get(HttpHeader.CONTENT_ENCODING);
-            log.info("contentEncoding:{}", contentEncoding);
-        } finally {
-            httpClient.stop();
+            httpClient.start();
+            return httpClient;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-
     }
-
-    private static void postHttp1(String url, String content) throws Exception {
-
-        HttpClient httpClient = new HttpClient();
-        httpClient.setFollowRedirects(true);
-        httpClient.start();
-
-        ContentProvider contentProvider = new StringContentProvider("application/json", content, StandardCharsets.UTF_8);
-        Request request = httpClient.POST(url).content(contentProvider, "application/json");
-
-        // 用于与服务端协商，如果支持协议升级，会返回响应头101，然后再使用h2c的协议发起请求
-        request.header(HttpHeader.UPGRADE, "h2c");
-        request.header(HttpHeader.HTTP2_SETTINGS, "");
-        request.header(HttpHeader.CONNECTION, "Upgrade, HTTP2-Settings");
-
-        ContentResponse contentResponse = request.send();
-        int status = contentResponse.getStatus();
-        HttpFields headers = contentResponse.getHeaders();
-        String connection = headers.get(HttpHeader.CONNECTION);
-        String upgrade = headers.get(HttpHeader.UPGRADE);
-        // https://blog.csdn.net/u011904605/article/details/53033192
-        // 协议升级协商结果：status:101, connection:Upgrade, upgrade:h2c
-        log.info("协议升级协商结果：status:{}, connection:{}, upgrade:{}", status, connection, upgrade);
-        HttpVersion version = contentResponse.getVersion();
-        log.info("version: {}", version);
-        System.out.println(version);
-        String contentAsString = contentResponse.getContentAsString();
-        System.out.println(contentAsString);
-        log.info("response:{}", contentAsString);
-
-        httpClient.stop();
-    }
-
-//    private static void get() throws Exception {
-//        HttpClientTransport transport = new HttpClientTransportDynamic();
-//        HttpClient httpClient = new HttpClient(transport);
-//        httpClient.setFollowRedirects(true);
-//        httpClient.start();
-//
-//        ContentResponse contentResponse = httpClient.GET("http://127.0.0.1:8082/tomcat/get");
-//        HttpVersion version = contentResponse.getVersion();
-//        System.out.println(version);
-//        String contentAsString = contentResponse.getContentAsString();
-//        System.out.println(contentAsString);
-//
-//        httpClient.stop();
-//    }
 }

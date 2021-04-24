@@ -8,6 +8,7 @@ package org.sample.http2.tomcat.controller;
 public class PostBody {
     private String name;
     private Integer age;
+    private int size = 20;
 
     public String getName() {
         return name;
@@ -23,5 +24,13 @@ public class PostBody {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 }
