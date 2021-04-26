@@ -12,8 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class PostBodyController {
     @PostMapping("/tomcat/post")
-    public String post(@RequestBody PostBody body) {
+    public String post(@RequestBody(required = false) PostBody body) {
         StringBuilder stringBuilder = new StringBuilder();
+
+        if (body == null) {
+            body = new PostBody();
+        }
         int size = body.getSize();
         size = size > 0 ? size : 20;
         for (int i = 0; i < size; i++) {

@@ -29,16 +29,16 @@ public class HttpClientWithHttp2Transport {
     public static void main(String[] args) {
         String url = "http://127.0.0.1:8081/tomcat/post";
         String requestBody = "{ \"age\": 0, \"name\": \"string\"}";
-        int headerCount = 10;
+        int headerCount = 1;
         int headerSize = 200;
-        int threadCount = 100;
+        int threadCount = 1;
 
         HttpClient httpClient = builderHttpClient();
         CountDownLatch countDownLatch = new CountDownLatch(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             Thread thread = new Thread(() -> {
-                for (int j = 0; j < 100; j++) {
+                for (int j = 0; j < 1; j++) {
                     Request request = buildRequest(httpClient, url, requestBody, headerCount, headerSize);
                     ContentResponse contentResponse = null;
                     try {
@@ -74,8 +74,8 @@ public class HttpClientWithHttp2Transport {
     private static Request buildRequest(HttpClient httpClient, String url, String content, int headerCount, int headerSize) {
         ContentProvider contentProvider = new StringContentProvider("application/json", content, StandardCharsets.UTF_8);
         Request request = httpClient.POST(url).content(contentProvider, "application/json");
-        request.timeout(6, TimeUnit.SECONDS);
-        request.idleTimeout(5, TimeUnit.SECONDS);
+        request.timeout(60, TimeUnit.SECONDS);
+        request.idleTimeout(50, TimeUnit.SECONDS);
         for (int i = 0; i < headerCount; i++) {
             request.header("x-customer-" + i, randomValue(headerSize));
         }

@@ -6,8 +6,8 @@ package org.sample.http2.tomcat.controller;
  * Date: 2021/4/1
  */
 public class PostBody {
-    private String name;
-    private Integer age;
+    private String name = "default-name";
+    private Integer age = 18;
     private int size = 20;
 
     public String getName() {
