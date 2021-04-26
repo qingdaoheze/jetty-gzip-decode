@@ -61,7 +61,7 @@ public class HttpClientWithHttp2TransportWithLowLevelApiWithContent {
         headers.put(HttpHeader.CONTENT_TYPE, "application/json");
 
         // request
-        String uri = "/tomcat/post";
+        String uri = "/tomcat/post111";
         String authority = hostName + ":" + port;
         MetaData.Request request = new MetaData.Request("POST", HttpScheme.HTTP, new HostPortHttpField(authority), uri, HttpVersion.HTTP_2, headers);
 
@@ -71,7 +71,7 @@ public class HttpClientWithHttp2TransportWithLowLevelApiWithContent {
 //                true);
 
         final CountDownLatch latch = new CountDownLatch(2);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 1; i++) {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
             Stream.Listener.Adapter listener = new Stream.Listener.Adapter() {
