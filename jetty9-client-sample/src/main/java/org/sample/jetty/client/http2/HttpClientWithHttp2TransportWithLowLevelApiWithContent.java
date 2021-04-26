@@ -65,113 +65,71 @@ public class HttpClientWithHttp2TransportWithLowLevelApiWithContent {
         String authority = hostName + ":" + port;
         MetaData.Request request = new MetaData.Request("POST", HttpScheme.HTTP, new HostPortHttpField(authority), uri, HttpVersion.HTTP_2, headers);
 
-        HeadersFrame frame = new HeadersFrame(request, null, true);
-        ByteBuffer contentBuffer = ByteBuffer.wrap("{ \"age\": 0, \"name\": \"abc\"}".getBytes(StandardCharsets.UTF_8));
 //        DataFrame dataFrame = new DataFrame(
 //                frame.getStreamId(),
 //                ByteBuffer.wrap("{ \"age\": 0, \"name\": \"abc\"}".getBytes(StandardCharsets.UTF_8)),
 //                true);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        final CountDownLatch latch = new CountDownLatch(1);
 
-        Promise.Completable<Stream> streamCompletable = new Promise.Completable<>();
-        Stream.Listener.Adapter listener = new Stream.Listener.Adapter()
-        {
-            @Override
-            public void onHeaders(Stream stream, HeadersFrame frame)
-            {
-                try {
-                    log.info("expect true: {} - stream.getId() > 0", stream.getId() > 0);
-                    log.info("expect equals: {} - stream.getId(), frame.getStreamId()", stream.getId() == frame.getStreamId());
-                    log.info("expect true: {} - frame.getMetaData().isResponse()", frame.getMetaData().isResponse());
-                    MetaData.Response response = (MetaData.Response)frame.getMetaData();
-                    log.info("expect 200: {} - response.getStatus()", response.getStatus());
-                } catch (Exception e) {
-                    log.error(e.getMessage(), e);
-                } finally {
-                    latch.countDown();
-                }
-            }
+        final CountDownLatch latch = new CountDownLatch(2);
+        for (int i = 0; i < 10; i++) {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-            @Override
-            public void onData(Stream stream, DataFrame frame, Callback callback)
-            {
-                try {
-                    ByteBuffer byteBuffer = frame.getData();
-
-//                    byteBuffer.flip();
-                    int length = byteBuffer.limit() - byteBuffer.position();
-                    for (int i = 0; i < length; i++) {
-                        outputStream.write(byteBuffer.get());
+            Stream.Listener.Adapter listener = new Stream.Listener.Adapter() {
+                @Override
+                public void onHeaders(Stream stream, HeadersFrame frame) {
+                    try {
+                        log.info("expect true: {} - stream.getId() > 0", stream.getId() > 0);
+                        log.info("expect equals: {} - stream.getId(), frame.getStreamId()", stream.getId() == frame.getStreamId());
+                        log.info("expect true: {} - frame.getMetaData().isResponse()", frame.getMetaData().isResponse());
+                        MetaData.Response response = (MetaData.Response) frame.getMetaData();
+                        log.info("expect 200: {} - response.getStatus()", response.getStatus());
+                    } catch (Exception e) {
+                        log.error(e.getMessage(), e);
                     }
-                    boolean isEnd = frame.isEndStream();
-                    if (isEnd) {
-                        String content = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
-                        log.info("content: {}", content);
-                    } else {
-                        log.info("received {} bytes response, but not end.", length);
-                    }
-                } catch (Exception e) {
-                    log.error(e.getMessage(), e);
-                } finally {
-                    callback.succeeded();
                 }
-            }
-        };
-//        session.newStream(frame, streamCompletable, listener);
-//        streamCompletable.thenCompose(stream ->
-//        {
-//            DataFrame dataFrame = new DataFrame(stream.getId(), contentBuffer, true);
-//            Callback.Completable dataCompletable = new Callback.Completable();
-//            stream.data(dataFrame, dataCompletable);
-//            return dataCompletable;
-//        });
 
-        session.newStream(frame, new Promise.Adapter<>(), listener);
+                @Override
+                public void onData(Stream stream, DataFrame frame, Callback callback) {
+                    try {
+                        ByteBuffer byteBuffer = frame.getData();
 
-//        session.newStream(frame, new Promise.Adapter<>(), new Stream.Listener.Adapter()
-//        {
-//            @Override
-//            public void onHeaders(Stream stream, HeadersFrame frame)
-//            {
-//                try {
-//                    log.info("expect true: {} - stream.getId() > 0", stream.getId() > 0);
-//                    log.info("expect equals: {} - stream.getId(), frame.getStreamId()", stream.getId() == frame.getStreamId());
-//                    log.info("expect true: {} - frame.getMetaData().isResponse()", frame.getMetaData().isResponse());
-//                    MetaData.Response response = (MetaData.Response)frame.getMetaData();
-//                    log.info("expect 200: {} - response.getStatus()", response.getStatus());
-//                } catch (Exception e) {
-//                    log.error(e.getMessage(), e);
-//                } finally {
-//                    latch.countDown();
-//                }
-//            }
-//
-//            @Override
-//            public void onData(Stream stream, DataFrame frame, Callback callback)
-//            {
-//                try {
-//                    ByteBuffer byteBuffer = frame.getData();
-//
-////                    byteBuffer.flip();
-//                    int length = byteBuffer.limit() - byteBuffer.position();
-//                    for (int i = 0; i < length; i++) {
-//                        outputStream.write(byteBuffer.get());
-//                    }
-//                    boolean isEnd = frame.isEndStream();
-//                    if (isEnd) {
-//                        String content = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
-//                        log.info("content: {}", content);
-//                    } else {
-//                        log.info("received {} bytes response, but not end.", length);
-//                    }
-//                } catch (Exception e) {
-//                    log.error(e.getMessage(), e);
-//                } finally {
-//                    callback.succeeded();
-//                }
-//            }
-//        });
+                        int length = byteBuffer.limit() - byteBuffer.position();
+                        for (int i = 0; i < length; i++) {
+                            outputStream.write(byteBuffer.get());
+                        }
+                        boolean isEnd = frame.isEndStream();
+                        if (isEnd) {
+                            byte[] bytes = outputStream.toByteArray();
+                            String content = new String(bytes, StandardCharsets.UTF_8);
+                            log.info("content: {}", content);
+                            latch.countDown();
+                        } else {
+                            log.info("received {} bytes response, but not end.", length);
+                        }
+                    } catch (Exception e) {
+                        log.error(e.getMessage(), e);
+                    } finally {
+                        callback.succeeded();
+                    }
+                }
+            };
+
+            Promise.Completable<Stream> streamCompletable = new Promise.Completable<>();
+            HeadersFrame frame = new HeadersFrame(request, null, false);
+            session.newStream(frame, streamCompletable, listener);
+
+            ByteBuffer contentBuffer = ByteBuffer.wrap("{ \"age\": 0, \"name\": \"abc\"}".getBytes(StandardCharsets.UTF_8));
+            streamCompletable.thenCompose(stream ->
+            {
+                int streamId = stream.getId();
+                log.info("streamId:{}", streamId);
+                DataFrame dataFrame = new DataFrame(streamId, contentBuffer, true);
+                Callback.Completable dataCompletable = new Callback.Completable();
+                stream.data(dataFrame, dataCompletable);
+                return dataCompletable;
+            });
+        }
+
         latch.await(10, TimeUnit.SECONDS);
         log.info("end");
         http2Client.stop();

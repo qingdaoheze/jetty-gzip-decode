@@ -116,16 +116,14 @@ public class HttpClientWithHttp2TransportWithLowLevelApi {
 //
 //        session.newStream(frame, new Promise.Adapter<>(), listener);
 
-        session.newStream(frame, new Promise.Adapter<>(), new Stream.Listener.Adapter()
-        {
+        Stream.Listener.Adapter listener = new Stream.Listener.Adapter() {
             @Override
-            public void onHeaders(Stream stream, HeadersFrame frame)
-            {
+            public void onHeaders(Stream stream, HeadersFrame frame) {
                 try {
                     log.info("expect true: {} - stream.getId() > 0", stream.getId() > 0);
                     log.info("expect equals: {} - stream.getId(), frame.getStreamId()", stream.getId() == frame.getStreamId());
                     log.info("expect true: {} - frame.getMetaData().isResponse()", frame.getMetaData().isResponse());
-                    MetaData.Response response = (MetaData.Response)frame.getMetaData();
+                    MetaData.Response response = (MetaData.Response) frame.getMetaData();
                     log.info("expect 200: {} - response.getStatus()", response.getStatus());
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
@@ -133,8 +131,7 @@ public class HttpClientWithHttp2TransportWithLowLevelApi {
             }
 
             @Override
-            public void onData(Stream stream, DataFrame frame, Callback callback)
-            {
+            public void onData(Stream stream, DataFrame frame, Callback callback) {
                 try {
                     ByteBuffer byteBuffer = frame.getData();
 
@@ -157,7 +154,8 @@ public class HttpClientWithHttp2TransportWithLowLevelApi {
                     callback.succeeded();
                 }
             }
-        });
+        };
+        session.newStream(frame, new Promise.Adapter<>(), listener);
         latch.await(10, TimeUnit.SECONDS);
         log.info("end");
         http2Client.stop();
