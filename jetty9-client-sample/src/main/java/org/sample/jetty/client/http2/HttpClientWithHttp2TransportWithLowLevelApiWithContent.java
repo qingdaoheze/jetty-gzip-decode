@@ -1,6 +1,7 @@
 package org.sample.jetty.client.http2;
 
 import org.eclipse.jetty.http.HostPortHttpField;
+import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpScheme;
@@ -23,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -61,7 +63,7 @@ public class HttpClientWithHttp2TransportWithLowLevelApiWithContent {
         headers.put(HttpHeader.CONTENT_TYPE, "application/json");
 
         // request
-        String uri = "/tomcat/post111";
+        String uri = "/tomcat/post";
         String authority = hostName + ":" + port;
         MetaData.Request request = new MetaData.Request("POST", HttpScheme.HTTP, new HostPortHttpField(authority), uri, HttpVersion.HTTP_2, headers);
 
@@ -82,6 +84,17 @@ public class HttpClientWithHttp2TransportWithLowLevelApiWithContent {
                         log.info("expect equals: {} - stream.getId(), frame.getStreamId()", stream.getId() == frame.getStreamId());
                         log.info("expect true: {} - frame.getMetaData().isResponse()", frame.getMetaData().isResponse());
                         MetaData.Response response = (MetaData.Response) frame.getMetaData();
+                        HttpFields fields = response.getFields();
+                        Set<String> headerNames = fields.getFieldNamesCollection();
+                        for (String headerName : headerNames) {
+                            String[] headerValues = fields.getField(headerName).getValues();
+                            for (String headerValue : headerValues) {
+                                log.info("{}: {}", headerName, headerValue);
+                            }
+                        }
+
+                        String reason = response.getReason();
+                        log.info("reason: {}", reason);
                         log.info("expect 200: {} - response.getStatus()", response.getStatus());
                     } catch (Exception e) {
                         log.error(e.getMessage(), e);
